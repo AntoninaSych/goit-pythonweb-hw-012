@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment Variables
+.env
+
+# Database
+*.sqlite3
+instance/
+db.sqlite3
+
+# Migrations
+migrations/versions/*.pyc
+migrations/versions/*.py~
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# VSCode
+.vscode/
+
+# MacOS
+.DS_Store
