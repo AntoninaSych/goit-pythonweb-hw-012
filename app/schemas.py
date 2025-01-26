@@ -12,6 +12,7 @@ class UserResponse(UserBase):
     is_active: bool
     is_verified: bool
     avatar_url: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -33,6 +34,7 @@ class ContactCreate(ContactBase):
 class ContactResponse(ContactBase):
     id: int
     owner_id: int
+
     class Config:
         from_attributes = True
 
