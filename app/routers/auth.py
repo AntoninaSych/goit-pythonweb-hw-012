@@ -1,3 +1,5 @@
+# app/routers/auth.py
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
@@ -17,14 +19,11 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=409, detail="Email already registered")
     new_user = crud.create_user(db, user)
-    send_verification_email(new_user.email)
+    send_verification_email(new_user.email)  # Відправляємо лист із посиланням
     return new_user
 
 @router.post("/login", response_model=schemas.Token)
-def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
-):
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = crud.get_user_by_email(db, form_data.username)
     if not user or not utils.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -49,7 +48,8 @@ def verify_email(email: str = Query(...), db: Session = Depends(get_db)):
 
 def send_verification_email(to_email: str):
     subject = "Email Verification"
-    text = "Please verify your email by clicking the link..."
+    link = f"http://localhost:8000/auth/verify?email={to_email}"
+    text = f"Please verify your email by clicking the link: {link}"
     msg = MIMEText(text)
     msg["Subject"] = subject
     msg["From"] = settings.MAIL_USERNAME
