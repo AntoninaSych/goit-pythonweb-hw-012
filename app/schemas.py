@@ -1,4 +1,3 @@
-# app/schemas.py
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 
@@ -13,9 +12,8 @@ class UserResponse(UserBase):
     is_active: bool
     is_verified: bool
     avatar_url: Optional[str] = None
-
     class Config:
-        from_attributes = True  # для Pydantic v2 замість orm_mode = True
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
@@ -35,9 +33,8 @@ class ContactCreate(ContactBase):
 class ContactResponse(ContactBase):
     id: int
     owner_id: int
-
     class Config:
         from_attributes = True
 
 class UpdateAvatar(BaseModel):
-    avatar: str  # Base64 або URL залежно від реалізації
+    avatar: str

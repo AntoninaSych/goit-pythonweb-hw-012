@@ -1,6 +1,4 @@
-# app/config.py
 from pydantic_settings import BaseSettings
-from pydantic import EmailStr
 from typing import List
 
 class Settings(BaseSettings):
@@ -10,8 +8,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     EMAIL_HOST: str
     EMAIL_PORT: int
-    EMAIL_USER: EmailStr
-    EMAIL_PASSWORD: str
+    MAIL_USERNAME: str
+    MAIL_PASSWORD: str
     CLOUDINARY_CLOUD_NAME: str
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str

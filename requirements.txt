@@ -13,10 +13,4 @@ fastapi-limiter
 redis
 psycopg2-binary
 alembic
-flake8
-mypy
-black
-isort
-pre-commit
-
 python-multipart

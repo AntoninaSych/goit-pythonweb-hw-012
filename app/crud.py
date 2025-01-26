@@ -1,7 +1,6 @@
-# app/crud.py
 from sqlalchemy.orm import Session
-from . import models, schemas, utils
 from typing import Optional, List
+from . import models, schemas, utils
 
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
