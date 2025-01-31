@@ -2,8 +2,13 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 from . import models, schemas, utils
 
+
+def get_user_by_token(db: Session, token: str) -> Optional[models.User]:
+    return db.query(models.User).filter(models.User.token == token).first()
+
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
+
 
 def create_user(db: Session, user: schemas.UserCreate) -> models.User:
     hashed_password = utils.get_password_hash(user.password)

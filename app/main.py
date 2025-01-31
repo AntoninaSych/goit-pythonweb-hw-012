@@ -8,10 +8,13 @@ from fastapi_limiter.depends import RateLimiter
 
 from .routers import auth, users, contacts
 
+
 Base.metadata.create_all(bind=engine)
+
 
 app = FastAPI(title="Contacts API")
 
+# Настройка CORS (разрешение запросов с других доменов)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
@@ -22,9 +25,14 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    redis_client = redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
+    """Инициализация FastAPI-Limiter с Redis"""
+    redis_client = redis.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        decode_responses=True
+    )
     await FastAPILimiter.init(redis_client)
 
 app.include_router(auth.router)
-app.include_router(users.router, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+app.include_router(users.router)
 app.include_router(contacts.router)

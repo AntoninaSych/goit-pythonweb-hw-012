@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str
     ALLOWED_ORIGINS: List[str]
     REDIS_URL: str
+    TEST_DATABASE_URL:str
 
     class Config:
         env_file = ".env"

@@ -18,10 +18,12 @@ cloudinary.config(
     api_secret=settings.CLOUDINARY_API_SECRET
 )
 
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
-    # Логіка декоду JWT, пошук користувача...
-    # Для стислості винесена або поки опустимо
-    ...
+    user = crud.get_user_by_token(db, token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+    return user
 
 @router.get("/me", response_model=schemas.UserResponse)
 def read_users_me(current_user: models.User = Depends(get_current_user)):

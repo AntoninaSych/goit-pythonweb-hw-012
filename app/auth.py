@@ -1,4 +1,3 @@
-# app/auth.py
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -8,7 +7,41 @@ from .config import settings
 from .database import SessionLocal
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
 
+from .config import settings
+
+# Секретний ключ та алгоритм для підпису токенів
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    """
+    Створює JWT токен доступу.
+
+    :param data: Дані, які потрібно зашифрувати у токені (наприклад, email користувача).
+    :param expires_delta: Термін дії токена (за замовчуванням 30 хвилин).
+    :return: Строка з JWT токеном.
+    """
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta  # Додаємо час дії токена
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})  # Додаємо термін дії в дані токена
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)  # Шифруємо дані в JWT
+    return encoded_jwt
+
+def decode_access_token(token: str):
+    """
+    Декодує JWT-токен, повертає розкодувані дані або None, якщо токен недійсний.
+    """
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        return None
 
 def get_db():
     db = SessionLocal()
