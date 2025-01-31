@@ -1,5 +1,10 @@
+import json
+from datetime import datetime, timedelta
+
+import redis
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from . import crud, models, schemas, utils
@@ -16,6 +21,9 @@ from .config import settings
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Ініціалізація Redis клієнта через URL з settings (наприклад, "redis://localhost:6379/0")
+redis_client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     """
@@ -50,7 +58,6 @@ def get_db():
     finally:
         db.close()
 
-
 def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> models.User:
@@ -63,11 +70,30 @@ def get_current_user(
     if payload is None or "sub" not in payload:
         raise credentials_exception
     email: str = payload.get("sub")
+
+    # Спроба отримати користувача з кешу Redis
+    cache_key = f"user:{email}"
+    cached_user = redis_client.get(cache_key)
+    if cached_user:
+        user_data = json.loads(cached_user)
+        return models.User(**user_data)
+
+    # Якщо в кеші немає, звертаємось до бази даних
     user = crud.get_user_by_email(db, email=email)
     if user is None:
         raise credentials_exception
-    return user
 
+    # Формуємо словник для кешування (без чутливих даних)
+    user_dict = {
+        "id": user.id,
+        "email": user.email,
+        "is_active": user.is_active,
+        "is_verified": user.is_verified,
+        "avatar_url": user.avatar_url
+    }
+    # Зберігаємо в Redis на 5 хвилин (300 секунд)
+    redis_client.setex(cache_key, 300, json.dumps(user_dict))
+    return user
 
 def get_current_active_user(
     current_user: models.User = Depends(get_current_user),
