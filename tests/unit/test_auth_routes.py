@@ -1,7 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 from app.main import app
 from app.database import get_db
 from app import schemas, crud, utils, models
@@ -64,26 +63,24 @@ def test_login_success(db):
     assert json_response["token_type"] == "bearer"
 
 
-# ✅ Test sending verification email
+# ✅ Test sending verification email with email as query parameter
 def test_send_verification_email(db, mock_send_email):
     mock_user = models.User(
         id=1, email="test@example.com", hashed_password="hashed", is_active=True, is_verified=False
     )
 
+    # Patch the function that looks up the user
     with patch("app.crud.get_user_by_email", return_value=mock_user):
+        # Now pass email as query parameter instead of JSON body
         response = client.post(
-            "/auth/send-verification-email",
-            json={"email": "test@example.com"},
-            headers={"Content-Type": "application/json"}
+            "/auth/send-verification-email?email=test@example.com"
         )
 
     print(response.json())  # ✅ Debug response body if needed
     assert response.status_code == 200
 
 
-
-
-# ✅ Fix: HTTP 422 → 400 when user is already verified
+# ✅ Test sending verification email when user is already verified
 def test_send_verification_email_already_verified(db):
     mock_user = models.User(
         id=1, email="test@example.com", hashed_password="hashed", is_active=True, is_verified=True
@@ -91,51 +88,59 @@ def test_send_verification_email_already_verified(db):
 
     with patch("app.crud.get_user_by_email", return_value=mock_user):
         response = client.post(
-            "/auth/send-verification-email",
-            json={"email": "test@example.com"},
-            headers={"Content-Type": "application/json"}
+            "/auth/send-verification-email?email=test@example.com"
         )
 
     print(response.json())  # ✅ Debug response body if needed
     assert response.status_code == 400
 
 
-
-
 # ✅ Test confirming email successfully
 def test_confirm_email(db):
+    # Create a persistent user by adding it to the test database session.
     mock_user = models.User(
         id=1, email="test@example.com", hashed_password="hashed", is_active=True, is_verified=False
     )
+    db.add(mock_user)
+    db.commit()
 
-    with patch("app.crud.get_user_by_email", return_value=mock_user):
-        db.add(mock_user)  # ✅ Attach user to session
-        db.commit()  # ✅ Commit before refresh
+    # Override the get_db dependency so that the endpoint uses our test db session.
+    app.dependency_overrides[get_db] = lambda: db
 
-        response = client.get("/auth/confirm-email?email=test@example.com")
+    response = client.get("/auth/confirm-email?email=test@example.com")
+
+    # Remove dependency override after the test.
+    app.dependency_overrides.pop(get_db, None)
 
     assert response.status_code == 200
 
 
-
-
-# ✅ Fix: Confirming already verified email
+# ✅ Test confirming already verified email
 def test_confirm_already_verified_email(db):
     mock_user = models.User(
         id=1, email="test@example.com", hashed_password="hashed", is_active=True, is_verified=True
     )
+    db.add(mock_user)
+    db.commit()
 
-    with patch("app.crud.get_user_by_email", return_value=mock_user):
-        response = client.get("/auth/confirm-email?email=test@example.com")
+    app.dependency_overrides[get_db] = lambda: db
+
+    response = client.get("/auth/confirm-email?email=test@example.com")
+
+    app.dependency_overrides.pop(get_db, None)
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Email already verified"
 
 
-# ✅ Fix: Confirming a non-existent email
+# ✅ Test confirming a non-existent email
 def test_confirm_non_existent_email(db):
-    with patch("app.crud.get_user_by_email", return_value=None):
-        response = client.get("/auth/confirm-email?email=nonexistent@example.com")
+    # Do not add any user to the db for this test.
+    app.dependency_overrides[get_db] = lambda: db
+
+    response = client.get("/auth/confirm-email?email=nonexistent@example.com")
+
+    app.dependency_overrides.pop(get_db, None)
 
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"
